@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="vi" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>English Dialogue & Audio Hub (Mobile First)</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome 6 for crisp icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Plus Jakarta Sans"', 'Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#eef2ff',
+                            100: '#e0e7ff',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+        }
+        /* Hide scrollbars for slick mobile horizontal scrollers */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        /* Auto-expand textarea styling */
+        textarea.auto-grow {
+            overflow: hidden;
+            min-height: 4.5rem;
+        }
+        
+        /* Mobile safe-area paddings for notch/bottom indicators */
+        .safe-bottom {
+            padding-bottom: max(1rem, env(safe-area-inset-bottom));
+        }
+        .safe-top {
+            padding-top: max(0.75rem, env(safe-area-inset-top));
+        }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 h-full flex flex-col antialiased select-none selection:bg-indigo-100">
+
+    <header class="bg-white/95 backdrop-blur-md border-b border-slate-200/80 sticky top-0 z-30 px-4 py-3 safe-top flex items-center justify-between shadow-xs">
+        <div class="flex items-center space-x-2.5">
+            <button onclick="app.openDrawer()" class="w-10 h-10 rounded-xl bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 flex items-center justify-center text-lg transition duration-150" aria-label="Mở danh sách 40 chủ đề">
+                <i class="fa-solid fa-bars-staggered"></i>
+            </button>
+            <div>
+                <h1 class="font-bold text-slate-900 text-base leading-tight tracking-tight">Hội thoại & Audio</h1>
+                <p class="text-[11px] text-slate-500 font-medium flex items-center space-x-1">
+                    <span id="header-progress-text">0 / 400 Đã nạp</span>
+                </p>
+            </div>
+        </div>
+
+        <!-- Quick actions: Stats badge & backup menu -->
+        <div class="flex items-center space-x-1.5">
+            <button onclick="app.openStatsModal()" class="w-10 h-10 rounded-xl bg-indigo-50 active:scale-95 text-indigo-600 flex items-center justify-center transition" title="Xem tiến độ">
+                <i class="fa-solid fa-chart-pie text-sm"></i>
+            </button>
+            <button onclick="app.openBackupModal()" class="w-10 h-10 rounded-xl bg-slate-100 active:scale-95 text-slate-700 flex items-center justify-center transition" title="Xuất/Nhập dữ liệu">
+                <i class="fa-solid fa-ellipsis-vertical text-base"></i>
+            </button>
+        </div>
+    </header>
+
+    <nav class="bg-white border-b border-slate-200/80 py-2.5 px-3 overflow-x-auto no-scrollbar flex items-center space-x-2 shrink-0 z-20 shadow-xs">
+        <div id="horizontal-topics-bar" class="flex items-center space-x-2 shrink-0">
+            <!-- Populated via JavaScript with pill buttons 1 to 40 -->
+        </div>
+    </nav>
+
+    <main class="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+        
+        <!-- Active Folder Header Card with In-Place Editable Name -->
+        <div class="bg-gradient-to-br from-indigo-600 via-indigo-700 to-indigo-800 text-white rounded-2xl p-4 shadow-md relative overflow-hidden">
+            <div class="absolute -right-4 -bottom-4 opacity-10 pointer-events-none text-8xl">
+                <i class="fa-solid fa-folder-open"></i>
+            </div>
+            
+            <div class="flex items-center justify-between mb-2">
+                <div class="inline-flex items-center space-x-1.5 bg-white/20 backdrop-blur-md px-2.5 py-0.5 rounded-full text-xs font-semibold">
+                    <i class="fa-regular fa-folder text-indigo-200 text-[11px]"></i>
+                    <span id="folder-badge-label">Thư mục #1 / 40</span>
+                </div>
+                <!-- Progress in current folder -->
+                <span id="current-folder-progress" class="text-xs bg-emerald-500/90 text-white font-medium px-2 py-0.5 rounded-full shadow-xs">
+                    0/10 mục
+                </span>
+            </div>
+
+            <div class="mt-1">
+                <label class="block text-[11px] uppercase font-semibold tracking-wider text-indigo-200 mb-1">
+                    Tên thư mục (Chạm để chỉnh sửa):
+                </label>
+                <div class="relative flex items-center">
+                    <input 
+                        type="text" 
+                        id="folder-title-input" 
+                        onchange="app.saveCurrentFolderName(this.value)" 
+                        placeholder="Nhập tên chủ đề..."
+                        class="w-full text-lg font-bold bg-white/10 hover:bg-white/20 focus:bg-white focus:text-slate-900 text-white border border-white/20 focus:border-white rounded-xl px-3 py-2 outline-none transition duration-150"
+                    >
+                    <i class="fa-solid fa-pencil absolute right-3 text-white/50 pointer-events-none text-xs"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- 10 Dialogue & Audio Cards for Mobile View -->
+        <div id="slots-container" class="space-y-3.5 pb-20">
+            <!-- Dynamic 10 Cards Injected Here -->
+        </div>
+
+    </main>
+
+    <footer class="fixed bottom-0 inset-x-0 bg-white/95 backdrop-blur-md border-t border-slate-200 px-4 py-2 safe-bottom z-20 flex items-center justify-between shadow-lg">
+        <button onclick="app.prevFolder()" id="prev-folder-btn" class="h-11 px-4 rounded-xl bg-slate-100 active:bg-slate-200 text-slate-700 font-medium text-sm flex items-center space-x-2 transition">
+            <i class="fa-solid fa-arrow-left text-xs"></i>
+            <span>Trước</span>
+        </button>
+
+        <button onclick="app.openDrawer()" class="h-11 px-4 rounded-xl bg-indigo-50 text-indigo-600 font-semibold text-sm flex items-center space-x-1.5 active:scale-95 transition">
+            <i class="fa-solid fa-layer-group text-xs"></i>
+            <span id="bottom-folder-counter">Mục 1 / 40</span>
+        </button>
+
+        <button onclick="app.nextFolder()" id="next-folder-btn" class="h-11 px-4 rounded-xl bg-indigo-600 active:bg-indigo-700 text-white font-medium text-sm flex items-center space-x-2 transition">
+            <span>Tiếp</span>
+            <i class="fa-solid fa-arrow-right text-xs"></i>
+        </button>
+    </footer>
+
+    <div id="drawer-backdrop" onclick="app.closeDrawer()" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-40 hidden transition-opacity duration-300 opacity-0"></div>
+
+    <aside id="drawer-panel" class="fixed top-0 bottom-0 left-0 w-5/6 max-w-sm bg-white z-50 shadow-2xl flex flex-col transform -translate-x-full transition-transform duration-300 ease-out safe-top safe-bottom">
+        <div class="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+            <div>
+                <h3 class="font-bold text-slate-800 text-base flex items-center">
+                    <i class="fa-solid fa-folders mr-2 text-indigo-600"></i> 40 Chủ đề
+                </h3>
+                <p class="text-xs text-slate-500">Chạm để chuyển nhanh chủ đề</p>
+            </div>
+            <button onclick="app.closeDrawer()" class="w-9 h-9 rounded-xl bg-slate-200 text-slate-600 flex items-center justify-center active:scale-90 transition">
+                <i class="fa-solid fa-xmark text-sm"></i>
+            </button>
+        </div>
+
+        <!-- Search folders in Drawer -->
+        <div class="p-3 border-b border-slate-100">
+            <div class="relative">
+                <i class="fa-solid fa-magnifying-glass absolute left-3 top-3 text-slate-400 text-xs"></i>
+                <input 
+                    type="text" 
+                    id="drawer-search-input" 
+                    oninput="app.filterDrawerFolders(this.value)"
+                    placeholder="Tìm theo số hoặc tên chủ đề..." 
+                    class="w-full bg-slate-100 text-sm rounded-xl pl-8 pr-3 py-2 border-none focus:ring-2 focus:ring-indigo-500 text-slate-800 outline-none"
+                >
+            </div>
+        </div>
+
+        <!-- Scrollable Folder List -->
+        <div id="drawer-folders-list" class="flex-1 overflow-y-auto p-2.5 space-y-1.5 divide-y-0">
+            <!-- Populated via Javascript -->
+        </div>
+
+        <div class="p-3 border-t border-slate-200 bg-slate-50 flex items-center justify-between text-xs text-slate-500">
+            <span>Tổng cộng: 40 thư mục</span>
+            <button onclick="app.scrollToActiveDrawer()" class="text-indigo-600 font-semibold hover:underline">Về mục hiện tại</button>
+        </div>
+    </aside>
+
+    <div id="backup-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 hidden flex items-end sm:items-center justify-center p-0 sm:p-4 transition duration-200">
+        <div class="bg-white w-full sm:max-w-md rounded-t-3xl sm:rounded-2xl p-5 shadow-2xl safe-bottom space-y-4 animate-in slide-in-from-bottom-5">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div class="flex items-center space-x-2">
+                    <div class="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center text-sm">
+                        <i class="fa-solid fa-cloud-arrow-down"></i>
+                    </div>
+                    <h3 class="font-bold text-slate-800 text-base">Sao lưu & Quản lý</h3>
+                </div>
+                <button onclick="app.closeBackupModal()" class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center">
+                    <i class="fa-solid fa-xmark text-sm"></i>
+                </button>
+            </div>
+
+            <p class="text-xs text-slate-600 leading-relaxed">
+                Dữ liệu 40 thư mục và các file âm thanh được lưu an toàn trong bộ nhớ máy của bạn. Bạn có thể xuất thành tệp JSON hoặc khôi phục bất cứ lúc nào.
+            </p>
+
+            <div class="space-y-2 pt-1">
+                <button onclick="app.exportJsonData()" class="w-full min-h-[48px] bg-emerald-600 active:bg-emerald-700 text-white font-medium text-sm rounded-xl px-4 flex items-center justify-center space-x-2 shadow-xs transition">
+                    <i class="fa-solid fa-download"></i>
+                    <span>Tải về file JSON (Sao lưu)</span>
+                </button>
+
+                <label class="w-full min-h-[48px] bg-indigo-50 active:bg-indigo-100 text-indigo-700 font-medium text-sm rounded-xl px-4 flex items-center justify-center space-x-2 cursor-pointer border border-indigo-200 transition">
+                    <i class="fa-solid fa-upload"></i>
+                    <span>Nhập dữ liệu từ file JSON</span>
+                    <input type="file" accept=".json" class="hidden" onchange="app.importJsonData(event)">
+                </label>
+
+                <button onclick="app.clearAllDataPrompt()" class="w-full min-h-[44px] bg-rose-50 active:bg-rose-100 text-rose-600 font-medium text-xs rounded-xl px-4 flex items-center justify-center space-x-2 transition mt-3">
+                    <i class="fa-solid fa-trash-can"></i>
+                    <span>Xóa toàn bộ dữ liệu (Khôi phục mặc định)</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="stats-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 hidden flex items-end sm:items-center justify-center p-0 sm:p-4">
+        <div class="bg-white w-full sm:max-w-md rounded-t-3xl sm:rounded-2xl p-5 shadow-2xl safe-bottom space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                <h3 class="font-bold text-slate-800 text-base flex items-center">
+                    <i class="fa-solid fa-chart-line text-indigo-600 mr-2"></i> Tiến độ tổng thể
+                </h3>
+                <button onclick="app.closeStatsModal()" class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center">
+                    <i class="fa-solid fa-xmark text-sm"></i>
+                </button>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+                <div class="bg-indigo-50/70 p-3.5 rounded-2xl border border-indigo-100">
+                    <span class="text-xs text-indigo-600 font-medium block">Hội thoại đã nhập</span>
+                    <span id="stat-dialogues-count" class="text-2xl font-black text-indigo-900 mt-1 block">0 / 400</span>
+                    <div class="w-full bg-indigo-200/60 h-1.5 rounded-full mt-2 overflow-hidden">
+                        <div id="stat-dialogues-bar" class="bg-indigo-600 h-full rounded-full transition-all duration-300" style="width: 0%"></div>
+                    </div>
+                </div>
+
+                <div class="bg-emerald-50/70 p-3.5 rounded-2xl border border-emerald-100">
+                    <span class="text-xs text-emerald-600 font-medium block">File âm thanh MP3</span>
+                    <span id="stat-audios-count" class="text-2xl font-black text-emerald-900 mt-1 block">0 / 400</span>
+                    <div class="w-full bg-emerald-200/60 h-1.5 rounded-full mt-2 overflow-hidden">
+                        <div id="stat-audios-bar" class="bg-emerald-600 h-full rounded-full transition-all duration-300" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-slate-50 p-3 rounded-xl border border-slate-100 text-xs text-slate-600">
+                <div class="flex justify-between py-1">
+                    <span>Tổng số thư mục:</span>
+                    <span class="font-bold text-slate-800">40 chủ đề</span>
+                </div>
+                <div class="flex justify-between py-1">
+                    <span>Số mục trong mỗi thư mục:</span>
+                    <span class="font-bold text-slate-800">10 mục (Tổng: 400 cặp)</span>
+                </div>
+                <div class="flex justify-between py-1">
+                    <span>Định dạng file Audio:</span>
+                    <span class="font-bold text-indigo-600">MP3 / Audio (8-10 giây)</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast-wrapper" class="fixed top-4 inset-x-4 z-50 flex flex-col space-y-2 pointer-events-none"></div>
+
+    <script>
+        class MobileDialogueApp {
+            constructor() {
+                this.activeFolderIndex = 0;
+                this.dbName = 'mobile_audio_dialogues_db';
+                this.storeName = 'folders_store';
+                this.db = null;
+                this.data = [];
+                this.searchFilter = '';
+            }
+
+            /* Initialize IndexedDB for resilient offline mobile audio storage */
+            async init() {
+                try {
+                    await this.initDB();
+                    await this.loadData();
+                    this.renderHorizontalBar();
+                    this.renderCurrentFolder();
+                    this.updateGlobalCounters();
+                } catch (e) {
+                    console.error("Initialization failed, falling back to LocalStorage", e);
+                    this.data = this.fallbackLoad();
+                    this.renderHorizontalBar();
+                    this.renderCurrentFolder();
+                    this.updateGlobalCounters();
+                }
+            }
+
+            initDB() {
+                return new Promise((resolve, reject) => {
+                    const req = indexedDB.open(this.dbName, 1);
+                    req.onupgradeneeded = (e) => {
+                        const db = e.target.result;
+                        if (!db.objectStoreNames.contains(this.storeName)) {
+                            db.createObjectStore(this.storeName, { keyPath: 'id' });
+                        }
+                    };
+                    req.onsuccess = (e) => {
+                        this.db = e.target.result;
+                        resolve();
+                    };
+                    req.onerror = (e) => reject(e);
+                });
+            }
+
+            async loadData() {
+                return new Promise((resolve, reject) => {
+                    const tx = this.db.transaction([this.storeName], 'readonly');
+                    const store = tx.objectStore(this.storeName);
+                    const req = store.getAll();
+
+                    req.onsuccess = () => {
+                        if (req.result && req.result.length === 40) {
+                            this.data = req.result.sort((a, b) => a.id - b.id);
+                            resolve();
+                        } else {
+                            // Seed default 40 folders with 10 slots each
+                            this.data = this.generateDefaultData();
+                            this.saveAllData().then(resolve);
+                        }
+                    };
+                    req.onerror = () => reject(req.error);
+                });
+            }
+
+            /* Generate baseline structure for 40 folders x 10 slots */
+            generateDefaultData() {
+                const list = [];
+                for (let i = 1; i <= 40; i++) {
+                    const slots = [];
+                    for (let s = 1; s <= 10; s++) {
+                        slots.push({
+                            slotIndex: s,
+                            dialogue: '',
+                            audioName: '',
+                            audioData: null,
+                            audioDuration: ''
+                        });
+                    }
+                    list.push({
+                        id: i,
+                        name: `Chủ đề ${i}`,
+                        slots: slots
+                    });
+                }
+                return list;
+            }
+
+            async saveFolder(folder) {
+                if (this.db) {
+                    const tx = this.db.transaction([this.storeName], 'readwrite');
+                    tx.objectStore(this.storeName).put(folder);
+                } else {
+                    localStorage.setItem('cached_folders_data', JSON.stringify(this.data));
+                }
+                this.updateGlobalCounters();
+            }
+
+            async saveAllData() {
+                if (this.db) {
+                    const tx = this.db.transaction([this.storeName], 'readwrite');
+                    const store = tx.objectStore(this.storeName);
+                    store.clear();
+                    this.data.forEach(item => store.put(item));
+                } else {
+                    localStorage.setItem('cached_folders_data', JSON.stringify(this.data));
+                }
+                this.updateGlobalCounters();
+            }
+
+            fallbackLoad() {
+                const raw = localStorage.getItem('cached_folders_data');
+                if (raw) {
+                    try { return JSON.parse(raw); } catch (e) {}
+                }
+                return this.generateDefaultData();
+            }
+
+            renderHorizontalBar() {
+                const container = document.getElementById('horizontal-topics-bar');
+                let html = '';
+
+                this.data.forEach((folder, idx) => {
+                    const isActive = idx === this.activeFolderIndex;
+                    const filledCount = folder.slots.filter(s => s.dialogue.trim() || s.audioData).length;
+
+                    html += `
+                        <button 
+                            id="tab-btn-${idx}"
+                            onclick="app.setFolder(${idx})" 
+                            class="min-h-[40px] px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all duration-150 flex items-center space-x-1.5 ${
+                                isActive 
+                                ? 'bg-indigo-600 text-white shadow-sm ring-2 ring-indigo-300' 
+                                : 'bg-slate-100 hover:bg-slate-200 text-slate-700 active:scale-95'
+                            }"
+                        >
+                            <span>${idx + 1}. ${this.escape(folder.name)}</span>
+                            ${filledCount > 0 ? `
+                                <span class="w-2 h-2 rounded-full ${isActive ? 'bg-emerald-300' : 'bg-emerald-500'}"></span>
+                            ` : ''}
+                        </button>
+                    `;
+                });
+
+                container.innerHTML = html;
+                
+                // Auto scroll selected horizontal tab into view
+                const activeBtn = document.getElementById(`tab-btn-${this.activeFolderIndex}`);
+                if (activeBtn) {
+                    activeBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+                }
+            }
+
+            renderCurrentFolder() {
+                const folder = this.data[this.activeFolderIndex];
+                if (!folder) return;
+
+                // Update Header info
+                document.getElementById('folder-badge-label').textContent = `Thư mục #${folder.id} / 40`;
+                document.getElementById('folder-title-input').value = folder.name;
+                document.getElementById('bottom-folder-counter').textContent = `Mục ${folder.id} / 40`;
+
+                // Update Prev/Next button states
+                document.getElementById('prev-folder-btn').disabled = this.activeFolderIndex === 0;
+                document.getElementById('prev-folder-btn').classList.toggle('opacity-40', this.activeFolderIndex === 0);
+                document.getElementById('next-folder-btn').disabled = this.activeFolderIndex === 39;
+                document.getElementById('next-folder-btn').classList.toggle('opacity-40', this.activeFolderIndex === 39);
+
+                // Slot completion inside this folder
+                const filledDialogues = folder.slots.filter(s => s.dialogue.trim() !== '').length;
+                const filledAudios = folder.slots.filter(s => s.audioData).length;
+                document.getElementById('current-folder-progress').textContent = `${filledDialogues}/10 chữ • ${filledAudios}/10 âm thanh`;
+
+                // Render the 10 mobile-optimized cards
+                const container = document.getElementById('slots-container');
+                let cardsHtml = '';
+
+                folder.slots.forEach((slot, index) => {
+                    const hasDialogue = slot.dialogue.trim().length > 0;
+                    const hasAudio = !!slot.audioData;
+
+                    cardsHtml += `
+                        <div class="bg-white rounded-2xl p-4 border border-slate-200/90 shadow-xs space-y-3 transition duration-150">
+                            <!-- Card Header -->
+                            <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+                                <div class="flex items-center space-x-2">
+                                    <span class="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-700 font-bold text-xs flex items-center justify-center">
+                                        #${index + 1}
+                                    </span>
+                                    <span class="text-xs font-semibold text-slate-700">Hội thoại ${index + 1} (8-10s)</span>
+                                </div>
+                                <div class="flex items-center space-x-1.5">
+                                    ${hasDialogue ? '<span class="text-[11px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-medium">Đã có chữ</span>' : '<span class="text-[11px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-400">Trống</span>'}
+                                    ${hasAudio ? '<span class="text-[11px] px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 font-medium"><i class="fa-solid fa-check text-[10px]"></i> Audio</span>' : ''}
+                                </div>
+                            </div>
+
+                            <!-- Auto-resizing mobile textarea for dialogue text -->
+                            <div>
+                                <textarea 
+                                    rows="2"
+                                    placeholder="Nhập nội dung hội thoại tiếng Anh tại đây..."
+                                    oninput="app.handleTextChange(${index}, this)"
+                                    class="auto-grow w-full bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-xl p-3 text-sm text-slate-800 placeholder-slate-400 outline-none transition resize-none leading-relaxed"
+                                >${this.escape(slot.dialogue)}</textarea>
+                            </div>
+
+                            <!-- Mobile Audio Action Row (Upload + HTML5 Player) -->
+                            <div class="space-y-2 pt-1">
+                                <div class="flex items-center space-x-2">
+                                    <label class="flex-1 min-h-[44px] bg-slate-100 active:bg-indigo-50 hover:bg-slate-200 border border-slate-200 text-slate-700 font-medium text-xs px-3 rounded-xl flex items-center justify-center space-x-2 cursor-pointer transition">
+                                        <i class="fa-solid fa-music text-indigo-600"></i>
+                                        <span class="truncate">${hasAudio ? 'Đổi file MP3' : 'Tải lên MP3 (8-10s)'}</span>
+                                        <input type="file" accept="audio/*,.mp3" class="hidden" onchange="app.handleAudioUpload(${index}, event)">
+                                    </label>
+
+                                    ${hasAudio ? `
+                                        <button onclick="app.removeAudio(${index})" class="min-h-[44px] w-11 rounded-xl bg-rose-50 active:bg-rose-100 text-rose-600 flex items-center justify-center transition" title="Xóa file này">
+                                            <i class="fa-solid fa-trash-can text-sm"></i>
+                                        </button>
+                                    ` : ''}
+                                </div>
+
+                                <!-- HTML5 Audio player on mobile -->
+                                ${hasAudio ? `
+                                    <div class="bg-indigo-50/50 p-2 rounded-xl border border-indigo-100 space-y-1">
+                                        <div class="flex items-center justify-between text-[11px] text-slate-600 px-1">
+                                            <span class="truncate max-w-[200px] font-medium text-indigo-900">${this.escape(slot.audioName || 'audio.mp3')}</span>
+                                            <span class="text-indigo-600 font-semibold text-[10px]">8-10s</span>
+                                        </div>
+                                        <audio controls class="w-full h-8 rounded-lg outline-none">
+                                            <source src="${slot.audioData}" type="audio/mpeg">
+                                            Trình duyệt không hỗ trợ audio
+                                        </audio>
+                                    </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    `;
+                });
+
+                container.innerHTML = cardsHtml;
+                this.renderHorizontalBar();
+            }
+
+            handleTextChange(slotIndex, textareaElem) {
+                // Auto grow height
+                textareaElem.style.height = 'auto';
+                textareaElem.style.height = textareaElem.scrollHeight + 'px';
+
+                const folder = this.data[this.activeFolderIndex];
+                folder.slots[slotIndex].dialogue = textareaElem.value;
+                this.saveFolder(folder);
+            }
+
+            handleAudioUpload(slotIndex, event) {
+                const file = event.target.files[0];
+                if (!file) return;
+
+                if (!file.type.includes('audio') && !file.name.toLowerCase().endsWith('.mp3')) {
+                    this.showToast("Chỉ hỗ trợ file MP3 hoặc âm thanh hợp lệ!", "error");
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const folder = this.data[this.activeFolderIndex];
+                    folder.slots[slotIndex].audioData = e.target.result;
+                    folder.slots[slotIndex].audioName = file.name;
+                    this.saveFolder(folder);
+                    this.renderCurrentFolder();
+                    this.showToast(`Đã lưu MP3: ${file.name}`, "success");
+                };
+                reader.onerror = () => {
+                    this.showToast("Không thể đọc tệp âm thanh này!", "error");
+                };
+                reader.readAsDataURL(file);
+            }
+
+            removeAudio(slotIndex) {
+                const folder = this.data[this.activeFolderIndex];
+                folder.slots[slotIndex].audioData = null;
+                folder.slots[slotIndex].audioName = '';
+                this.saveFolder(folder);
+                this.renderCurrentFolder();
+                this.showToast("Đã xóa file audio.", "info");
+            }
+
+            saveCurrentFolderName(val) {
+                const folder = this.data[this.activeFolderIndex];
+                const clean = val.trim();
+                if (!clean) {
+                    this.showToast("Tên thư mục không được để trống!", "error");
+                    document.getElementById('folder-title-input').value = folder.name;
+                    return;
+                }
+                folder.name = clean;
+                this.saveFolder(folder);
+                this.renderHorizontalBar();
+                this.renderDrawerList();
+                this.showToast("Đã đổi tên thư mục!", "success");
+            }
+
+            /* Navigation helpers */
+            setFolder(index) {
+                if (index < 0 || index >= this.data.length) return;
+                this.activeFolderIndex = index;
+                this.renderCurrentFolder();
+                this.closeDrawer();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+
+            prevFolder() {
+                if (this.activeFolderIndex > 0) {
+                    this.setFolder(this.activeFolderIndex - 1);
+                }
+            }
+
+            nextFolder() {
+                if (this.activeFolderIndex < this.data.length - 1) {
+                    this.setFolder(this.activeFolderIndex + 1);
+                }
+            }
+
+            openDrawer() {
+                this.renderDrawerList();
+                const backdrop = document.getElementById('drawer-backdrop');
+                const panel = document.getElementById('drawer-panel');
+                backdrop.classList.remove('hidden');
+                setTimeout(() => {
+                    backdrop.classList.remove('opacity-0');
+                    panel.classList.remove('-translate-x-full');
+                }, 10);
+            }
+
+            closeDrawer() {
+                const backdrop = document.getElementById('drawer-backdrop');
+                const panel = document.getElementById('drawer-panel');
+                panel.classList.add('-translate-x-full');
+                backdrop.classList.add('opacity-0');
+                setTimeout(() => {
+                    backdrop.classList.add('hidden');
+                }, 300);
+            }
+
+            filterDrawerFolders(query) {
+                this.searchFilter = query.trim().toLowerCase();
+                this.renderDrawerList();
+            }
+
+            renderDrawerList() {
+                const container = document.getElementById('drawer-folders-list');
+                let html = '';
+
+                this.data.forEach((folder, idx) => {
+                    const match = folder.name.toLowerCase().includes(this.searchFilter) || String(idx + 1).includes(this.searchFilter);
+                    if (!match) return;
+
+                    const isActive = idx === this.activeFolderIndex;
+                    const filledDialogues = folder.slots.filter(s => s.dialogue.trim() !== '').length;
+                    const filledAudios = folder.slots.filter(s => s.audioData).length;
+
+                    html += `
+                        <button 
+                            id="drawer-item-${idx}"
+                            onclick="app.setFolder(${idx})" 
+                            class="w-full min-h-[46px] p-2.5 rounded-xl flex items-center justify-between transition active:scale-98 ${
+                                isActive 
+                                ? 'bg-indigo-50 border border-indigo-200 text-indigo-900 font-bold' 
+                                : 'hover:bg-slate-100 text-slate-700'
+                            }"
+                        >
+                            <div class="flex items-center space-x-2.5 truncate">
+                                <span class="w-6 h-6 rounded-lg text-xs flex items-center justify-center font-bold ${
+                                    isActive ? 'bg-indigo-600 text-white' : 'bg-slate-200 text-slate-600'
+                                }">${idx + 1}</span>
+                                <span class="text-sm truncate">${this.escape(folder.name)}</span>
+                            </div>
+                            <div class="flex items-center space-x-1 shrink-0 text-[10px]">
+                                <span class="px-1.5 py-0.5 rounded bg-slate-200 text-slate-700">${filledDialogues}/10</span>
+                                <span class="px-1.5 py-0.5 rounded ${filledAudios > 0 ? 'bg-indigo-100 text-indigo-700 font-semibold' : 'bg-slate-100 text-slate-400'}">
+                                    <i class="fa-solid fa-volume-high"></i> ${filledAudios}
+                                </span>
+                            </div>
+                        </button>
+                    `;
+                });
+
+                container.innerHTML = html || '<div class="p-4 text-center text-slate-400 text-sm">Không tìm thấy chủ đề</div>';
+            }
+
+            scrollToActiveDrawer() {
+                const elem = document.getElementById(`drawer-item-${this.activeFolderIndex}`);
+                if (elem) elem.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+
+            updateGlobalCounters() {
+                let totalDialogues = 0;
+                let totalAudios = 0;
+
+                this.data.forEach(f => {
+                    f.slots.forEach(s => {
+                        if (s.dialogue.trim()) totalDialogues++;
+                        if (s.audioData) totalAudios++;
+                    });
+                });
+
+                // Update Header
+                document.getElementById('header-progress-text').textContent = `${totalDialogues}/400 chữ • ${totalAudios}/400 MP3`;
+                
+                // Update Modal values
+                document.getElementById('stat-dialogues-count').textContent = `${totalDialogues} / 400`;
+                document.getElementById('stat-audios-count').textContent = `${totalAudios} / 400`;
+
+                const pctDialogues = Math.round((totalDialogues / 400) * 100);
+                const pctAudios = Math.round((totalAudios / 400) * 100);
+
+                document.getElementById('stat-dialogues-bar').style.width = pctDialogues + '%';
+                document.getElementById('stat-audios-bar').style.width = pctAudios + '%';
+            }
+
+            /* Backup and Export JSON Dialog */
+            openBackupModal() {
+                document.getElementById('backup-modal').classList.remove('hidden');
+            }
+
+            closeBackupModal() {
+                document.getElementById('backup-modal').classList.add('hidden');
+            }
+
+            openStatsModal() {
+                this.updateGlobalCounters();
+                document.getElementById('stats-modal').classList.remove('hidden');
+            }
+
+            closeStatsModal() {
+                document.getElementById('stats-modal').classList.add('hidden');
+            }
+
+            exportJsonData() {
+                const jsonBlob = new Blob([JSON.stringify(this.data, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(jsonBlob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `mobile_dialogues_audio_backup_${new Date().toISOString().slice(0, 10)}.json`;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                URL.revokeObjectURL(url);
+                this.showToast("Đã tải về tệp sao lưu JSON!", "success");
+                this.closeBackupModal();
+            }
+
+            importJsonData(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = async (e) => {
+                    try {
+                        const parsed = JSON.parse(e.target.result);
+                        if (Array.isArray(parsed) && parsed.length === 40) {
+                            this.data = parsed;
+                            await this.saveAllData();
+                            this.renderHorizontalBar();
+                            this.renderCurrentFolder();
+                            this.showToast("Đã nhập thành công toàn bộ dữ liệu!", "success");
+                            this.closeBackupModal();
+                        } else {
+                            this.showToast("Tệp JSON không hợp lệ hoặc không đủ 40 thư mục!", "error");
+                        }
+                    } catch (err) {
+                        this.showToast("Lỗi giải mã file JSON!", "error");
+                    }
+                };
+                reader.readAsText(file);
+                event.target.value = '';
+            }
+
+            async clearAllDataPrompt() {
+                if (!confirm("Cảnh báo: Thao tác này sẽ xóa sạch dữ liệu 40 thư mục và âm thanh về mặc định ban đầu. Bạn chắc chắn chứ?")) return;
+                this.data = this.generateDefaultData();
+                await this.saveAllData();
+                this.renderHorizontalBar();
+                this.renderCurrentFolder();
+                this.closeBackupModal();
+                this.showToast("Đã khôi phục dữ liệu về mặc định!", "info");
+            }
+
+            /* Custom Touch-Friendly Toast */
+            showToast(msg, type = 'success') {
+                const container = document.getElementById('toast-wrapper');
+                const toast = document.createElement('div');
+                
+                let bg = 'bg-slate-900 text-white';
+                let icon = 'fa-circle-check text-emerald-400';
+                if (type === 'error') {
+                    bg = 'bg-rose-600 text-white';
+                    icon = 'fa-triangle-exclamation text-white';
+                } else if (type === 'info') {
+                    bg = 'bg-indigo-600 text-white';
+                    icon = 'fa-circle-info text-white';
+                }
+
+                toast.className = `${bg} px-4 py-3 rounded-2xl shadow-xl text-xs font-medium flex items-center space-x-2.5 transition-all duration-300 transform -translate-y-4 opacity-0 pointer-events-auto`;
+                toast.innerHTML = `<i class="fa-solid ${icon} text-sm"></i><span class="flex-1">${msg}</span>`;
+                container.appendChild(toast);
+
+                setTimeout(() => toast.classList.remove('-translate-y-4', 'opacity-0'), 20);
+                setTimeout(() => {
+                    toast.classList.add('-translate-y-4', 'opacity-0');
+                    setTimeout(() => toast.remove(), 300);
+                }, 2800);
+            }
+
+            escape(str) {
+                if (!str) return '';
+                return String(str)
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;');
+            }
+        }
+
+        let app;
+        window.addEventListener('DOMContentLoaded', () => {
+            app = new MobileDialogueApp();
+            app.init();
+        });
+    </script>
+</body>
+</html>
